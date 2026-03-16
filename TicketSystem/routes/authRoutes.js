@@ -7,57 +7,92 @@ const router = express.Router();
 
 /* Register */
 router.post("/register", async (req, res) => {
-    try {
-        const { name, email, password } = req.body;
+  try {
 
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({ message: "User already exists" });
-        }
+    const { name, email, password, role } = req.body;
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+    const existingUser = await User.findOne({ email });
 
-        const user = new User({
-            name,
-            email,
-            password: hashedPassword
-        });
-
-        await user.save();
-
-        res.json({ message: "User registered successfully" });
-
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: "User already exists"
+      });
     }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = new User({
+      name,
+      email,
+      password: hashedPassword,
+      role
+    });
+
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      data: { message: "User registered successfully" },
+      error: null
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      data: null,
+      error: error.message
+    });
+  }
 });
+
 
 /* Login */
 router.post("/login", async (req, res) => {
-    try {
-        const { email, password } = req.body;
+  try {
 
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.status(400).json({ message: "Invalid credentials" });
-        }
+    const { email, password } = req.body;
 
-        const validPassword = await bcrypt.compare(password, user.password);
-        if (!validPassword) {
-            return res.status(400).json({ message: "Invalid credentials" });
-        }
+    const user = await User.findOne({ email });
 
-        const token = jwt.sign(
-            { userId: user._id, role: user.role },
-            "secretkey",
-            { expiresIn: "1d" }
-        );
-
-        res.json({ token });
-
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: "Invalid credentials"
+      });
     }
+
+    const validPassword = await bcrypt.compare(password, user.password);
+
+    if (!validPassword) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: "Invalid credentials"
+      });
+    }
+
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET || "secretkey",
+      { expiresIn: "1d" }
+    );
+
+    res.json({
+      success: true,
+      data: { token },
+      error: null
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      data: null,
+      error: error.message
+    });
+  }
 });
 
 module.exports = router;

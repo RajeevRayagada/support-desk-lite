@@ -1,65 +1,80 @@
 const express = require("express");
-const auth = require("../middleware/auth");
-const Comment = require("../models/Comment");
-const Ticket = require("../models/Ticket");
-
 const router = express.Router();
 
-/* Add Comment */
+const Comment = require("../models/Comment");
+const auth = require("../middleware/auth");
+
 router.post("/:ticketId", auth, async (req, res) => {
 
-    try {
+  try {
 
-        const { body, type } = req.body;
+    const { body, type } = req.body;
 
-        if (type === "internal" && req.user.role === "customer") {
-            return res.status(403).json({
-                message: "Customers cannot create internal notes"
-            });
-        }
-
-        const ticket = await Ticket.findById(req.params.ticketId);
-
-        if (!ticket) {
-            return res.status(404).json({ message: "Ticket not found" });
-        }
-
-        const comment = new Comment({
-            ticketId: req.params.ticketId,
-            body,
-            type: type || "public",
-            createdBy: req.user.userId
-        });
-
-        await comment.save();
-
-        res.json(comment);
-
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    if (type === "internal" && req.user.role === "customer") {
+      return res.status(403).json({
+        success: false,
+        data: null,
+        error: "Customers cannot create internal notes"
+      });
     }
+
+    const comment = new Comment({
+      ticketId: req.params.ticketId,
+      body,
+      type,
+      createdBy: req.user.userId
+    });
+
+    await comment.save();
+
+    res.json({
+      success: true,
+      data: comment,
+      error: null
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      data: null,
+      error: error.message
+    });
+
+  }
 
 });
 
-/* Get Comments for Ticket */
+
 router.get("/:ticketId", auth, async (req, res) => {
 
-    try {
+  try {
 
-        let filter = { ticketId: req.params.ticketId };
+    const query = { ticketId: req.params.ticketId };
 
-        if (req.user.role === "customer") {
-            filter.type = "public";
-        }
-
-        const comments = await Comment.find(filter)
-            .populate("createdBy");
-
-        res.json(comments);
-
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    if (req.user.role === "customer") {
+      query.type = "public";
     }
+
+    const comments = await Comment
+      .find(query)
+      .populate("createdBy", "-password");
+
+    res.json({
+      success: true,
+      data: comments,
+      error: null
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      success: false,
+      data: null,
+      error: error.message
+    });
+
+  }
 
 });
 

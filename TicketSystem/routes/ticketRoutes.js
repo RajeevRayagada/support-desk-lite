@@ -3,6 +3,7 @@ const router = express.Router();
 
 const auth = require("../middleware/auth");
 const Ticket = require("../models/Ticket");
+const Joi = require("joi");
 
 /* -----------------------------
 CREATE TICKET
@@ -11,11 +12,29 @@ Customer creates ticket
 router.post("/", auth, async (req, res) => {
   try {
 
-    const { title, description } = req.body;
+    /* Joi validation */
+    const schema = Joi.object({
+      title: Joi.string().min(5).max(200).required(),
+      description: Joi.string().min(10).max(5000).required(),
+      priority: Joi.string().valid("low", "medium", "high").required()
+    });
+
+    const { error } = schema.validate(req.body);
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: error.details[0].message
+      });
+    }
+
+    const { title, description, priority } = req.body;
 
     const ticket = new Ticket({
       title,
       description,
+      priority,
       createdBy: req.user.userId
     });
 
@@ -43,7 +62,7 @@ GET TICKETS (with pagination)
 router.get("/", auth, async (req, res) => {
   try {
 
-    let { page = 1, limit = 10 } = req.query;
+    let { page = 1, limit = 10, status, priority } = req.query;
 
     page = parseInt(page);
     limit = Math.min(parseInt(limit), 50);
@@ -54,10 +73,15 @@ router.get("/", auth, async (req, res) => {
       query.createdBy = req.user.userId;
     }
 
+    /* optional filters */
+    if (status) query.status = status;
+    if (priority) query.priority = priority;
+
     const total = await Ticket.countDocuments(query);
 
     const tickets = await Ticket.find(query)
-      .populate("createdBy assignedTo")
+      .populate("createdBy", "-password")
+      .populate("assignedTo", "-password")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
@@ -191,6 +215,5 @@ router.patch("/:id/status", auth, async (req, res) => {
     });
   }
 });
-
 
 module.exports = router;

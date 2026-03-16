@@ -1,19 +1,23 @@
 {
   "name": "ticketsystem",
   "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
+  "description": "Support Desk Lite",
+  "main": "server.js",
   "author": "",
   "license": "ISC",
-  "description": "",
+
+  "scripts": {
+    "start": "node server.js",
+    "seed": "node scripts/seed.js",
+    "test": "echo \"No tests yet\""
+  },
+
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "joi": "^18.0.2",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.23.0"
   }
